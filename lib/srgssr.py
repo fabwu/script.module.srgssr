@@ -183,6 +183,8 @@ class SRGSSR(object):
         use_cache -- boolean to indicate if the cache provided by the
                      Kodi module SimpleCache should be used (default: True)
         """
+        # TODO: Revert
+        use_cache = False
         self.log('open_url, url = ' + str(url))
         cache_response = None
         if use_cache:
@@ -370,7 +372,7 @@ class SRGSSR(object):
                     listitem=list_item, isFolder=True)
 
     def build_menu_apiv3(self, queries, mode, page=None, page_hash=None,
-                         name='', include_segments=False,
+                         name='', include_segments=True,
                          segment_option=False):
         """
         Builds a menu based on the API v3.
@@ -401,12 +403,14 @@ class SRGSSR(object):
 
             items.sort(key=lambda item: item['date'], reverse=True)
             for item in items:
-                if include_segments or segment_option:
-                    self.build_episode_menu(
-                        item['id'], include_segments=include_segments,
-                        segment_option=segment_option)
-                else:
-                    self.build_entry(item)
+                # if include_segments or segment_option:
+                #     self.build_episode_menu(
+                #         item['id'], include_segments=include_segments,
+                #         segment_option=segment_option)
+                # else:
+                #     self.build_entry(item)
+                # TODO: Revert
+                self.build_episode_menu(item['id'], include_segments=False)
             return
 
         if page:
@@ -434,12 +438,15 @@ class SRGSSR(object):
             items = data
 
         for item in items:
-            if include_segments or segment_option:
-                self.build_episode_menu(
-                    item['id'], include_segments=include_segments,
-                    segment_option=segment_option)
-            else:
-                self.build_entry(item)
+            # if include_segments or segment_option:
+            #     self.build_episode_menu(
+            #         item['id'], include_segments=include_segments,
+            #         segment_option=segment_option)
+            # else:
+            #     self.build_entry(item)
+            # TODO: Revert!
+            self.build_episode_menu(
+                item['id'], include_segments=False, segment_option=True)
 
         if 'next' in data:
             cursor = data['next']
@@ -468,11 +475,13 @@ class SRGSSR(object):
         not for 'swi'.
         """
         if self.apiv3_url:
+            self.log('read_all_available_shows: Using API v3.')
             data = json.loads(self.open_url(self.apiv3_url + 'shows'))
             try:
                 return data['data']
             except Exception:
-                return []
+                self.log('read_all_available_shows: No shows found with API v3.',
+                         level=xbmc.LOGWARNING)
 
         json_url = ('http://il.srgssr.ch/integrationlayer/1.0/ue/%s/tv/'
                     'assetGroup/editorialPlayerAlphabetical.json') % self.bu
@@ -703,7 +712,8 @@ class SRGSSR(object):
         if self.apiv3_url:
             cursor = page_hash if page_hash else ''
             return self.build_menu_apiv3('videos-by-show-id?showId=' + show_id,
-                                         20, page_hash=cursor, name=show_id)
+                                         20, page_hash=cursor, name=show_id,
+                                         include_segments=self.segments)
 
         # TODO: This depends on the local time settings
         current_month_date = datetime.date.today().strftime('%m-%Y')
@@ -899,6 +909,7 @@ class SRGSSR(object):
             cursor = page if page else ''
             name = topic_id if topic_id else ''
             return self.build_menu_apiv3(query, mode, page=cursor, name=name,
+                                        #  include_segments=self.segments,
                                          segment_option=self.segments_topics)
 
         id_list = self.extract_id_list(url)
@@ -1041,9 +1052,9 @@ class SRGSSR(object):
         banner     -- URL of the show's banner (default: None)
         is_folder  -- indicates if the item is a folder (default: False)
         audio      -- boolean value to indicate if the entry contains
+                      audio (default: False)
         fanart     -- fanart to be used instead of default image
         urn        -- override urn from json_entry
-                      audio (default: False)
         """
         self.log('build_entry')
         title = utils.try_get(json_entry, 'title')
@@ -1105,9 +1116,11 @@ class SRGSSR(object):
                     self.log(
                         'No WEBVTT subtitles found for video id %s.' % vid)
 
-        # Prefer urn over vid as it contains already all data
-        # (bu, media type, id) and will be used anyway for the stream lookup
-        name = urn if urn else vid
+        # TODO: It might be beneficial to store the SRG URN in the `name` variable
+        # instead of the media id, but other other internal methods need to support
+        # this first.
+        # name = urn if urn else vid
+        name = vid
 
         if is_folder:
             list_item.setProperty('IsPlayable', 'false')
